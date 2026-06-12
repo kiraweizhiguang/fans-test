@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   :root{
@@ -140,6 +141,13 @@
   .btn-ghost{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--gold2);}
   .hint{text-align:center;font-size:12px;color:var(--muted);margin-top:8px;line-height:1.7;letter-spacing:.03em;}
 
+  .save-overlay{position:fixed;inset:0;z-index:80;background:rgba(6,4,18,.9);backdrop-filter:blur(6px);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 16px 40px;}
+  .save-overlay.on{display:flex;}
+  .save-inner{max-width:380px;width:100%;display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .save-tip{color:var(--gold2);font-size:15px;font-weight:700;letter-spacing:.05em;text-align:center;margin-top:8px;}
+  #saveImg{width:100%;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.6);border:1px solid var(--line);}
+  .save-dl{width:100%;text-align:center;text-decoration:none;}
+  .save-close{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;font-family:inherit;padding:6px;}
   #confetti{position:fixed;inset:0;pointer-events:none;z-index:50;}
   .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);opacity:0;
     background:rgba(26,16,48,.96);border:1px solid var(--line);color:var(--gold2);padding:12px 22px;border-radius:99px;
@@ -242,11 +250,22 @@
     </div>
 
     <div class="actions">
-      <button class="btn btn-main" onclick="share()">📤 分享命数 / 复制链接</button>
+      <button class="btn btn-main" id="saveBtn" onclick="savePoster()">🖼 生成命牌图片（含二维码）</button>
+      <button class="btn btn-ghost" onclick="share()">📤 分享链接</button>
       <button class="btn btn-ghost" onclick="restart()">↺ 重新占卜</button>
     </div>
-    <p class="hint">📸 截图这张命牌发朋友圈/群，<br>朋友扫码即可占卜自己的粉丝命数</p>
+    <p class="hint">生成图片后<b>长按即可保存</b>到相册，<br>发给朋友 · 扫图里的二维码就能开测</p>
   </section>
+
+  <!-- 长按保存图片 浮层 -->
+  <div id="saveOverlay" class="save-overlay">
+    <div class="save-inner">
+      <p class="save-tip">👇 长按下方图片 · 保存到相册</p>
+      <img id="saveImg" alt="命牌" />
+      <a id="saveDl" class="btn btn-main save-dl" download="我的粉丝命牌.png">⬇ 下载图片</a>
+      <button class="save-close" onclick="closeSave()">关闭</button>
+    </div>
+  </div>
 
 </div>
 <div class="toast" id="toast"></div>
@@ -408,8 +427,17 @@ let cur=0, answers=[];
 const $=id=>document.getElementById(id);
 const CN=["第一牌","第二牌","第三牌","第四牌","第五牌","第六牌","第七牌","第八牌","第九牌"];
 
-(function(){ let n=1286402+(Date.now()%900); $("cnt").textContent=n.toLocaleString(); })();
 $("brandfoot").textContent=CONFIG.brandName;
+
+/* ====================== 统计计数（Abacus，免注册）====================== */
+const STAT_NS="tubo-fans-test";        // 命名空间，改成别的就是另一套独立统计
+const STAT_BASE="https://abacus.jasoncameron.dev";
+const SOCIAL_BASE=8800;                // 社交证明的起步基数（页面好看用；真实数字看统计页）
+function statHit(key){ return fetch(`${STAT_BASE}/hit/${STAT_NS}/${key}`).then(r=>r.json()).then(d=>d.value).catch(()=>null); }
+function statGet(key){ return fetch(`${STAT_BASE}/get/${STAT_NS}/${key}`).then(r=>r.json()).then(d=>d.value).catch(()=>null); }
+// 进入页面记一次访问；并把「已完成人数」显示为社交证明
+statHit("visit");
+statGet("done").then(v=>{ const n=SOCIAL_BASE+(v||0); $("cnt").textContent=n.toLocaleString(); });
 
 function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));$(id).classList.add("on");window.scrollTo(0,0);}
 function start(){cur=0;answers=[];renderQ();show("screen-quiz");}
@@ -447,6 +475,9 @@ function finish(){
   countUp(wan);
   makeQR();
   burst(tier.ac);
+  // 记录一次「完成测试」+ 命格分布
+  statHit("done");
+  statHit("t"+(TIERS.indexOf(tier)+1));
 }
 // 从分数 + 答案指纹算出一个「精确而非整数」的粉丝数（万），同样答案结果固定
 function calcWan(tier,score){
@@ -473,7 +504,8 @@ function paint(t,score){
   t.steps.forEach((s,i)=>{const d=document.createElement("div");d.className="step";d.innerHTML=`<div class="n">${i+1}</div><div class="s">${s}</div>`;box.appendChild(d);});
 }
 function countUp(target){
-  const el=$("rnum");const dur=1800;const t0=performance.now();const dec=target<100;
+  const el=$("rnum");el.textContent=fmtWan(target);   // 兜底：先放最终值，rAF 不跑也不会是 0
+  const dur=1800;const t0=performance.now();const dec=target<100;
   function tick(now){const p=Math.min(1,(now-t0)/dur);const e=1-Math.pow(1-p,3);const v=target*e;
     el.textContent=dec?v.toFixed(1):Math.round(v).toLocaleString();
     if(p<1)requestAnimationFrame(tick);else el.textContent=fmtWan(target);}
@@ -500,6 +532,38 @@ async function share(){
 }
 function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200);}
 
+/* ====================== 生成命牌图片（长按保存）====================== */
+async function savePoster(){
+  const btn=$("saveBtn"); const old=btn.textContent; btn.textContent="正在生成…"; btn.disabled=true;
+  try{
+    if(typeof html2canvas==="undefined"){toast("图片库未加载，请截图分享");return;}
+    stopBurst();                                       // 停掉并清空彩带，避免混进图里
+    await new Promise(r=>setTimeout(r,60));
+    const node=$("poster");
+    const canvas=await html2canvas(node,{
+      backgroundColor:"#0e0820", scale:2, useCORS:true, logging:false,
+      ignoreElements:(el)=>el.id==="confetti"||el.id==="stars",
+      onclone:(doc)=>{
+        // html2canvas 不支持渐变裁切文字 → 截图时改成实心金色
+        doc.querySelectorAll(".r-num .v, .r-title").forEach(el=>{
+          el.style.background="none";
+          el.style.webkitBackgroundClip="border-box";
+          el.style.backgroundClip="border-box";
+          el.style.color="#ffe9a8";
+          el.style.webkitTextFillColor="#ffe9a8";
+          el.style.textShadow="none";
+        });
+      }
+    });
+    const url=canvas.toDataURL("image/png");
+    $("saveImg").src=url;
+    $("saveDl").href=url;
+    $("saveOverlay").classList.add("on");
+  }catch(e){ toast("生成失败，截图也可以分享 📸"); }
+  finally{ btn.textContent=old; btn.disabled=false; }
+}
+function closeSave(){ $("saveOverlay").classList.remove("on"); }
+
 /* ====================== 星空背景 ====================== */
 (function starfield(){
   const c=$("stars"),x=c.getContext("2d");let stars=[];
@@ -510,12 +574,15 @@ function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");set
 })();
 
 /* ====================== 彩带 ====================== */
+let burstStop=false;
+function stopBurst(){ burstStop=true; const c=$("confetti"); try{c.getContext("2d").clearRect(0,0,c.width,c.height);}catch(e){} }
 function burst(color){
+  burstStop=false;
   const c=$("confetti"),x=c.getContext("2d");c.width=innerWidth;c.height=innerHeight;
   const cols=[color,"#ffe9a8","#67e8f9","#f472b6","#ffffff"];let ps=[];
   for(let i=0;i<150;i++)ps.push({x:innerWidth/2+(i%2?1:-1)*Math.min(130,i),y:innerHeight*0.32,vx:(((i*37)%100)/100-0.5)*9,vy:-(((i*53)%100)/100)*12-3,g:0.28+((i*17)%30)/100,s:5+((i*13)%7),rot:(i*29)%360,vr:((i%2)?1:-1)*((i*7)%12),col:cols[i%cols.length],life:0});
   let frame=0;
-  (function loop(){x.clearRect(0,0,c.width,c.height);let alive=false;
+  (function loop(){if(burstStop){x.clearRect(0,0,c.width,c.height);return;}x.clearRect(0,0,c.width,c.height);let alive=false;
     ps.forEach(p=>{p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;p.life++;
       if(p.y<c.height+40){alive=true;x.save();x.translate(p.x,p.y);x.rotate(p.rot*Math.PI/180);x.fillStyle=p.col;x.globalAlpha=Math.max(0,1-p.life/150);x.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.6);x.restore();}});
     frame++;if(alive&&frame<210)requestAnimationFrame(loop);else x.clearRect(0,0,c.width,c.height);})();

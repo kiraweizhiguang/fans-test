@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>占卜统计 · 后台日志</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:"Noto Serif SC","Songti SC",serif;background:radial-gradient(120% 90% at 50% 0%,#1a0f3a,#080414 72%);
+    color:#ECE6FF;min-height:100dvh;padding:40px 20px;}
+  .wrap{max-width:460px;margin:0 auto;}
+  h1{font-size:30px;font-weight:900;text-align:center;
+    background:linear-gradient(120deg,#fff,#ffe9a8 60%,#f7d774);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{text-align:center;color:#9d96c7;font-size:13px;margin:8px 0 28px;letter-spacing:.1em;}
+  .big{display:flex;gap:14px;margin-bottom:24px;}
+  .stat{flex:1;background:linear-gradient(165deg,rgba(40,28,82,.7),rgba(14,8,32,.9));
+    border:1px solid rgba(247,215,116,.28);border-radius:18px;padding:22px 16px;text-align:center;}
+  .stat .num{font-size:46px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;
+    background:linear-gradient(120deg,#fff,#f7d774);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .stat .lab{font-size:13px;color:#9d96c7;margin-top:8px;letter-spacing:.1em;}
+  .card{background:rgba(255,255,255,.04);border:1px solid rgba(247,215,116,.18);border-radius:18px;padding:20px;}
+  .card h2{font-size:15px;color:#f7d774;letter-spacing:.1em;margin-bottom:18px;font-weight:800;}
+  .row{margin-bottom:16px;}
+  .row .top{display:flex;justify-content:space-between;font-size:14.5px;margin-bottom:7px;}
+  .row .top .n{color:#fff;font-weight:700;} .row .top .v{color:#c4b5fd;font-variant-numeric:tabular-nums;}
+  .track{height:12px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;}
+  .track>i{display:block;height:100%;border-radius:99px;transition:width .8s cubic-bezier(.3,.8,.3,1);}
+  .foot{text-align:center;color:#6b6594;font-size:12px;margin-top:24px;line-height:1.8;}
+  .foot a{color:#9d96c7;}
+  .rate{text-align:center;color:#67e8f9;font-size:14px;margin:18px 0 0;font-weight:700;}
+  .reload{display:block;margin:22px auto 0;background:linear-gradient(120deg,#ffe9a8,#f7d774);color:#1a1030;
+    border:none;border-radius:13px;padding:14px 28px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>✦ 占卜统计 ✦</h1>
+  <p class="sub">粉丝数命运占卜 · 后台日志</p>
+
+  <div class="big">
+    <div class="stat"><div class="num" id="visit">—</div><div class="lab">累计访问</div></div>
+    <div class="stat"><div class="num" id="done">—</div><div class="lab">完成占卜</div></div>
+  </div>
+
+  <div class="rate" id="rate"></div>
+
+  <div class="card" style="margin-top:18px">
+    <h2>命格分布</h2>
+    <div id="dist"></div>
+  </div>
+
+  <button class="reload" onclick="load()">↻ 刷新数据</button>
+  <p class="foot">数据来自 Abacus 实时计数 · 每完成一次占卜 +1<br>
+    把这个网址收藏起来，随时看有多少人测过</p>
+</div>
+
+<script>
+const NS="tubo-fans-test";
+const BASE="https://abacus.jasoncameron.dev";
+const TIERS=[
+  {key:"t1",name:"潜龙在渊 · 厚积之命",num:"几十万",col:"#34d0b0"},
+  {key:"t2",name:"破壁之相 · 准头部命",num:"百万级",col:"#6f9bff"},
+  {key:"t3",name:"紫微现世 · 顶流之命",num:"千万级",col:"#ff8a4c"},
+  {key:"t4",name:"天命所归 · 国民之相",num:"数千万",col:"#f7d774"},
+];
+const $=id=>document.getElementById(id);
+function get(k){return fetch(`${BASE}/get/${NS}/${k}`).then(r=>r.json()).then(d=>d.value).catch(()=>0);}
+async function load(){
+  const [visit,done,...ts]=await Promise.all([get("visit"),get("done"),...TIERS.map(t=>get(t.key))]);
+  $("visit").textContent=(visit||0).toLocaleString();
+  $("done").textContent=(done||0).toLocaleString();
+  if(visit>0) $("rate").textContent=`完成率 ${(100*(done||0)/visit).toFixed(0)}%`;
+  const total=ts.reduce((a,b)=>a+(b||0),0)||1;
+  $("dist").innerHTML=TIERS.map((t,i)=>{
+    const v=ts[i]||0, pct=(100*v/total).toFixed(0);
+    return `<div class="row"><div class="top"><span class="n">${t.name}</span><span class="v">${v} 人 · ${pct}%</span></div>
+      <div class="track"><i style="width:${pct}%;background:${t.col}"></i></div></div>`;
+  }).join("");
+}
+load();
+</script>
+</body>
+</html>
