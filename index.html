@@ -475,9 +475,9 @@ function finish(){
   countUp(wan);
   makeQR();
   burst(tier.ac);
-  // 记录一次「完成测试」+ 命格分布
+  // 记录一次「完成测试」+ 命格分布（Abacus 要求 key ≥3 字符）
   statHit("done");
-  statHit("t"+(TIERS.indexOf(tier)+1));
+  statHit("tier"+(TIERS.indexOf(tier)+1));
 }
 // 从分数 + 答案指纹算出一个「精确而非整数」的粉丝数（万），同样答案结果固定
 function calcWan(tier,score){

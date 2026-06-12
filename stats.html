@@ -59,10 +59,10 @@
 const NS="tubo-fans-test";
 const BASE="https://abacus.jasoncameron.dev";
 const TIERS=[
-  {key:"t1",name:"潜龙在渊 · 厚积之命",num:"几十万",col:"#34d0b0"},
-  {key:"t2",name:"破壁之相 · 准头部命",num:"百万级",col:"#6f9bff"},
-  {key:"t3",name:"紫微现世 · 顶流之命",num:"千万级",col:"#ff8a4c"},
-  {key:"t4",name:"天命所归 · 国民之相",num:"数千万",col:"#f7d774"},
+  {key:"tier1",name:"潜龙在渊 · 厚积之命",num:"几十万",col:"#34d0b0"},
+  {key:"tier2",name:"破壁之相 · 准头部命",num:"百万级",col:"#6f9bff"},
+  {key:"tier3",name:"紫微现世 · 顶流之命",num:"千万级",col:"#ff8a4c"},
+  {key:"tier4",name:"天命所归 · 国民之相",num:"数千万",col:"#f7d774"},
 ];
 const $=id=>document.getElementById(id);
 function get(k){return fetch(`${BASE}/get/${NS}/${k}`).then(r=>r.json()).then(d=>d.value).catch(()=>0);}
