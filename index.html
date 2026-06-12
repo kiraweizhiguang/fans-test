@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>粉丝数 · 命运占卜</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  :root{
+    --gold:#f7d774; --gold2:#ffe9a8; --gold-deep:#c9a23f;
+    --pur:#a78bfa; --cyan:#67e8f9; --rose:#f472b6;
+    --ink:#ECE6FF; --muted:#9d96c7;
+    --line:rgba(247,215,116,.28);
+    --ac:#a78bfa; --ac2:#c4b5fd;
+  }
+  html,body{height:100%;}
+  body{
+    font-family:"Noto Serif SC","Songti SC",serif;
+    color:var(--ink);
+    background:#080414;
+    overflow-x:hidden;
+  }
+  /* 宇宙背景层 */
+  #stars{position:fixed;inset:0;z-index:0;}
+  .nebula{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(60% 40% at 25% 12%, rgba(139,92,246,.35), transparent 60%),
+      radial-gradient(55% 45% at 80% 30%, rgba(103,232,249,.18), transparent 60%),
+      radial-gradient(70% 50% at 50% 100%, rgba(244,114,182,.20), transparent 60%),
+      radial-gradient(120% 90% at 50% 0%, #1a0f3a, #080414 72%);
+    transition:background .8s ease;}
+  #app{position:relative;z-index:2;max-width:480px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  .screen{flex:1;display:none;flex-direction:column;padding:30px 24px calc(30px + env(safe-area-inset-bottom));}
+  .screen.on{display:flex;animation:fadeUp .5s cubic-bezier(.2,.7,.2,1);}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+  .serif{font-family:"Noto Serif SC",serif;}
+  .calli{font-family:"Ma Shan Zheng","Noto Serif SC",cursive;}
+
+  /* ---------- 封面 ---------- */
+  .hero{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:20px;}
+  .eyebrow{font-size:13px;letter-spacing:.42em;color:var(--gold);font-weight:700;padding-left:.42em;}
+  .crystal{width:200px;height:200px;position:relative;}
+  .ring{position:absolute;inset:0;animation:spin 28s linear infinite;}
+  .ring.r2{animation:spin 40s linear infinite reverse;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .htitle{font-weight:900;font-size:50px;line-height:1.1;letter-spacing:.02em;
+    background:linear-gradient(120deg,#fff,var(--gold2) 45%,var(--gold) 70%,#fff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 40px rgba(247,215,116,.25);}
+  .hsub{font-size:16px;color:var(--muted);line-height:1.9;max-width:290px;font-weight:500;}
+  .cta{position:relative;margin-top:6px;width:100%;max-width:320px;padding:18px;border:1px solid var(--line);border-radius:16px;
+    font-family:"Noto Serif SC",serif;font-size:19px;font-weight:800;color:#1a1030;cursor:pointer;letter-spacing:.05em;
+    background:linear-gradient(120deg,var(--gold2),var(--gold));
+    box-shadow:0 14px 38px rgba(247,215,116,.30),inset 0 1px 0 rgba(255,255,255,.5);transition:transform .15s;}
+  .cta:active{transform:scale(.97);}
+  .meta{font-size:12.5px;color:var(--muted);letter-spacing:.1em;}
+  .social{font-size:13px;color:var(--muted);}
+  .social b{color:var(--gold);font-variant-numeric:tabular-nums;font-family:"Noto Serif SC",serif;}
+
+  /* ---------- 题目 ---------- */
+  .qtop{display:flex;align-items:center;gap:14px;margin-bottom:22px;}
+  .back{font-size:26px;color:var(--muted);background:none;border:none;cursor:pointer;line-height:1;font-family:serif;}
+  .bar{flex:1;height:6px;border-radius:99px;background:rgba(247,215,116,.12);overflow:hidden;}
+  .bar>i{display:block;height:100%;width:0;border-radius:99px;
+    background:linear-gradient(90deg,var(--gold),var(--cyan));box-shadow:0 0 12px rgba(247,215,116,.6);transition:width .45s cubic-bezier(.3,.8,.3,1);}
+  .qnum{font-size:12.5px;color:var(--gold);font-weight:700;white-space:nowrap;letter-spacing:.15em;}
+  /* 塔罗卡 */
+  .card{position:relative;border-radius:20px;padding:20px 18px 22px;margin-bottom:22px;text-align:center;overflow:hidden;
+    background:linear-gradient(165deg,rgba(40,28,78,.85),rgba(20,12,42,.92));
+    border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);}
+  .card .corner{position:absolute;width:30px;height:30px;opacity:.55;}
+  .card .corner.tl{top:9px;left:9px;} .card .corner.tr{top:9px;right:9px;transform:scaleX(-1);}
+  .card .corner.bl{bottom:9px;left:9px;transform:scaleY(-1);} .card .corner.br{bottom:9px;right:9px;transform:scale(-1);}
+  .emblem{width:128px;height:128px;margin:4px auto 12px;filter:drop-shadow(0 0 14px rgba(247,215,116,.4));}
+  .qhint{font-size:11.5px;letter-spacing:.4em;color:var(--gold);opacity:.8;margin-bottom:8px;padding-left:.4em;}
+  .qtext{font-size:22px;font-weight:700;line-height:1.5;letter-spacing:.01em;}
+  .opts{display:flex;flex-direction:column;gap:11px;}
+  .opt{display:flex;align-items:center;gap:13px;padding:16px 16px;border-radius:14px;cursor:pointer;
+    background:rgba(255,255,255,.045);border:1px solid rgba(247,215,116,.16);transition:all .2s;}
+  .opt:active{transform:scale(.985);}
+  .opt.sel{border-color:var(--gold);background:rgba(247,215,116,.12);box-shadow:0 0 22px rgba(247,215,116,.18);}
+  .opt .dot{width:24px;height:24px;flex:0 0 24px;border-radius:50%;border:1.5px solid rgba(247,215,116,.4);
+    display:flex;align-items:center;justify-content:center;transition:all .2s;}
+  .opt.sel .dot{background:var(--gold);border-color:var(--gold);box-shadow:0 0 14px rgba(247,215,116,.7);}
+  .opt.sel .dot::after{content:"✦";font-size:12px;color:#1a1030;}
+  .opt .t{font-size:16px;line-height:1.45;font-weight:500;text-align:left;}
+
+  /* ---------- 结果 ---------- */
+  #screen-result{padding-top:22px;}
+  .poster{position:relative;border-radius:24px;padding:30px 22px 24px;overflow:hidden;
+    background:linear-gradient(170deg,rgba(40,28,82,.7),rgba(14,8,32,.92));
+    border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);}
+  .halo{position:absolute;top:-30px;left:50%;transform:translateX(-50%);width:340px;height:340px;z-index:0;opacity:.85;}
+  .pcontent{position:relative;z-index:1;}
+  .r-eyebrow{text-align:center;font-size:12px;letter-spacing:.4em;color:var(--gold);font-weight:700;padding-left:.4em;}
+  .r-num{text-align:center;font-weight:900;line-height:.95;margin:14px 0 2px;}
+  .r-num .v{font-size:96px;font-family:"Noto Serif SC",serif;
+    background:linear-gradient(120deg,#fff,var(--gold2) 50%,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 40px rgba(247,215,116,.4);font-variant-numeric:tabular-nums;}
+  .r-num .u{font-size:34px;font-weight:800;color:var(--gold);}
+  .r-unit{text-align:center;font-size:16px;color:var(--muted);letter-spacing:.3em;margin-bottom:14px;padding-left:.3em;}
+  .r-title{text-align:center;font-size:27px;font-weight:900;letter-spacing:.04em;margin-bottom:10px;
+    background:linear-gradient(120deg,var(--gold2),#fff);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .r-tagwrap{text-align:center;}
+  .r-tag{display:inline-block;margin:0 auto 12px;padding:6px 18px;border-radius:99px;border:1px solid var(--line);
+    background:rgba(247,215,116,.08);font-size:13.5px;color:var(--gold2);font-weight:600;letter-spacing:.05em;}
+  .r-pct{text-align:center;font-size:14px;color:var(--cyan);font-weight:700;margin-bottom:18px;letter-spacing:.05em;}
+  .divider{display:flex;align-items:center;gap:12px;color:var(--gold);opacity:.6;margin:6px 0 16px;font-size:13px;}
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);}
+  .r-desc{font-size:15px;line-height:1.95;color:#e3ddff;background:rgba(0,0,0,.22);border-radius:14px;padding:16px 18px;margin-bottom:20px;font-weight:500;}
+  .steps-h{font-size:14.5px;font-weight:800;color:var(--gold);margin-bottom:14px;letter-spacing:.1em;display:flex;align-items:center;gap:8px;justify-content:center;}
+  .step{display:flex;gap:13px;margin-bottom:13px;align-items:flex-start;}
+  .step .n{flex:0 0 30px;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);
+    background:rgba(247,215,116,.1);color:var(--gold);display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:800;margin-top:1px;font-family:"Noto Serif SC",serif;}
+  .step .s{font-size:14.5px;line-height:1.6;color:#e7e2ff;font-weight:500;}
+  .step .s b{color:var(--gold2);font-weight:700;}
+
+  .qr-zone{margin-top:22px;padding-top:20px;border-top:1px dashed var(--line);display:flex;gap:14px;justify-content:center;}
+  .qr-zone.qr-single .qr-frame{width:136px;height:136px;}
+  .qr-zone.qr-single .qr-cap{font-size:13.5px;}
+  .qr-item{text-align:center;flex:1;}
+  .qr-frame{width:108px;height:108px;margin:0 auto 9px;position:relative;padding:9px;border-radius:13px;
+    background:linear-gradient(135deg,var(--gold2),var(--gold-deep));box-shadow:0 8px 22px rgba(0,0,0,.4);}
+  .qr-frame>div{width:100%;height:100%;background:#fff;border-radius:6px;padding:5px;display:flex;align-items:center;justify-content:center;}
+  .qr-frame img,.qr-frame canvas{width:100%!important;height:100%!important;}
+  .qr-cap{font-size:12px;color:var(--muted);font-weight:600;line-height:1.45;}
+  .qr-cap b{color:var(--gold2);}
+  .pfoot{text-align:center;margin-top:18px;font-size:11.5px;color:var(--muted);letter-spacing:.08em;}
+  .pfoot b{color:var(--gold);}
+
+  .actions{display:flex;flex-direction:column;gap:11px;margin-top:18px;}
+  .btn{padding:16px;border-radius:14px;font-family:"Noto Serif SC",serif;font-size:16px;font-weight:800;cursor:pointer;border:none;transition:transform .15s;letter-spacing:.05em;}
+  .btn:active{transform:scale(.98);}
+  .btn-main{background:linear-gradient(120deg,var(--gold2),var(--gold));color:#1a1030;box-shadow:0 12px 30px rgba(247,215,116,.3);}
+  .btn-ghost{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--gold2);}
+  .hint{text-align:center;font-size:12px;color:var(--muted);margin-top:8px;line-height:1.7;letter-spacing:.03em;}
+
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:50;}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:rgba(26,16,48,.96);border:1px solid var(--line);color:var(--gold2);padding:12px 22px;border-radius:99px;
+    font-size:14px;font-weight:600;transition:all .3s;z-index:60;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="nebula" id="nebula"></div>
+<canvas id="confetti"></canvas>
+
+<!-- 复用 SVG 资源 -->
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9a8"/><stop offset="1" stop-color="#c9a23f"/></linearGradient>
+  <linearGradient id="gPur" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c4b5fd"/><stop offset="1" stop-color="#7c5cff"/></linearGradient>
+  <radialGradient id="gGlow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#a78bfa" stop-opacity="0.9"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></radialGradient>
+  <filter id="soft"><feGaussianBlur stdDeviation="1.2"/></filter>
+</defs></svg>
+
+<div id="app">
+
+  <!-- ============ 封面 ============ -->
+  <section id="screen-intro" class="screen on">
+    <div class="hero">
+      <div class="eyebrow">星象 · 玄机 · 自测</div>
+      <div class="crystal">
+        <svg class="ring" viewBox="0 0 200 200" fill="none">
+          <circle cx="100" cy="100" r="92" stroke="url(#gGold)" stroke-width="0.8" stroke-dasharray="2 6" opacity="0.6"/>
+          <circle cx="100" cy="8" r="2.2" fill="#ffe9a8"/><circle cx="192" cy="100" r="1.6" fill="#67e8f9"/>
+          <circle cx="100" cy="192" r="2" fill="#f472b6"/><circle cx="8" cy="100" r="1.6" fill="#fff"/>
+          <circle cx="158" cy="42" r="1.4" fill="#fff"/><circle cx="42" cy="158" r="1.4" fill="#ffe9a8"/>
+        </svg>
+        <svg class="ring r2" viewBox="0 0 200 200" fill="none">
+          <circle cx="100" cy="100" r="74" stroke="url(#gPur)" stroke-width="0.8" stroke-dasharray="1 9" opacity="0.7"/>
+          <circle cx="100" cy="26" r="1.6" fill="#c4b5fd"/><circle cx="174" cy="100" r="1.6" fill="#fff"/>
+        </svg>
+        <svg viewBox="0 0 200 200" style="position:absolute;inset:0">
+          <circle cx="100" cy="100" r="46" fill="url(#gGlow)" opacity="0.85"/>
+          <circle cx="100" cy="100" r="40" fill="none" stroke="url(#gGold)" stroke-width="1.5"/>
+          <circle cx="100" cy="100" r="40" fill="rgba(20,12,42,0.55)"/>
+          <path d="M100 70 L107 92 L130 92 L112 106 L118 128 L100 114 L82 128 L88 106 L70 92 L93 92 Z" fill="url(#gGold)" opacity="0.95"/>
+          <circle cx="86" cy="84" r="1.4" fill="#fff"/><circle cx="118" cy="116" r="1.2" fill="#fff"/><circle cx="120" cy="80" r="1" fill="#67e8f9"/>
+        </svg>
+      </div>
+      <h1 class="htitle serif">粉丝数<br>命运占卜</h1>
+      <p class="hsub">九张命运之牌，照见你未来的粉丝数，<br>以及——抵达它的天机。</p>
+      <button class="cta" onclick="start()">✦ 开始占卜 ✦</button>
+      <p class="meta">静心 1 分钟 · 凭直觉选择 · 共 9 牌</p>
+      <p class="social">已有 <b id="cnt">1,286,402</b> 人窥见自己的命数</p>
+    </div>
+  </section>
+
+  <!-- ============ 题目 ============ -->
+  <section id="screen-quiz" class="screen">
+    <div class="qtop">
+      <button class="back" onclick="back()">‹</button>
+      <div class="bar"><i id="bar"></i></div>
+      <span class="qnum" id="qnum">第一牌</span>
+    </div>
+    <div class="card">
+      <svg class="corner tl" viewBox="0 0 30 30"><path d="M2 14 Q2 2 14 2" stroke="url(#gGold)" stroke-width="1.2" fill="none"/><circle cx="7" cy="7" r="1.5" fill="url(#gGold)"/></svg>
+      <svg class="corner tr" viewBox="0 0 30 30"><path d="M2 14 Q2 2 14 2" stroke="url(#gGold)" stroke-width="1.2" fill="none"/><circle cx="7" cy="7" r="1.5" fill="url(#gGold)"/></svg>
+      <svg class="corner bl" viewBox="0 0 30 30"><path d="M2 14 Q2 2 14 2" stroke="url(#gGold)" stroke-width="1.2" fill="none"/><circle cx="7" cy="7" r="1.5" fill="url(#gGold)"/></svg>
+      <svg class="corner br" viewBox="0 0 30 30"><path d="M2 14 Q2 2 14 2" stroke="url(#gGold)" stroke-width="1.2" fill="none"/><circle cx="7" cy="7" r="1.5" fill="url(#gGold)"/></svg>
+      <div class="qhint" id="qhint">凭第一直觉</div>
+      <div class="emblem" id="emblem"></div>
+      <h2 class="qtext serif" id="qtext"></h2>
+    </div>
+    <div class="opts" id="opts"></div>
+  </section>
+
+  <!-- ============ 结果 ============ -->
+  <section id="screen-result" class="screen">
+    <div class="poster" id="poster">
+      <svg class="halo" id="halo" viewBox="0 0 340 340" fill="none">
+        <g id="halo-rays"></g>
+        <circle cx="170" cy="150" r="120" fill="url(#gGlow)" opacity="0.5"/>
+      </svg>
+      <div class="pcontent">
+        <div class="r-eyebrow">天机已现 · 你未来的</div>
+        <div class="r-num"><span class="v" id="rnum">0</span><span class="u" id="runit">万</span></div>
+        <div class="r-unit">粉 丝</div>
+        <h2 class="r-title serif" id="rtitle"></h2>
+        <div class="r-tagwrap"><span class="r-tag" id="rtag"></span></div>
+        <div class="r-pct" id="rpct"></div>
+        <div class="divider">✦ 命 格 解 读 ✦</div>
+        <div class="r-desc" id="rdesc"></div>
+        <div class="steps-h">✧ 天 机 · 如 何 抵 达 ✧</div>
+        <div id="rsteps"></div>
+
+        <div class="qr-zone qr-single">
+          <div class="qr-item">
+            <div class="qr-frame"><div id="qr1"></div></div>
+            <div class="qr-cap"><b>扫码占卜你的粉丝命数</b><br>转发给朋友 · 一起测测命</div>
+          </div>
+        </div>
+        <div class="pfoot">长按或扫码即可占卜 · <b id="brandfoot">Kira 内容增长</b></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-main" onclick="share()">📤 分享命数 / 复制链接</button>
+      <button class="btn btn-ghost" onclick="restart()">↺ 重新占卜</button>
+    </div>
+    <p class="hint">📸 截图这张命牌发朋友圈/群，<br>朋友扫码即可占卜自己的粉丝命数</p>
+  </section>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ====================================================================
+   部署后改这两个链接，二维码才能被扫
+   ==================================================================== */
+const CONFIG = {
+  url: "",                       // 留空 = 二维码自动指向当前网页地址（部署后即生效）；也可手动填死
+  brandName: "Kira 内容增长",
+};
+const SHARE_URL = CONFIG.url || location.href.split("#")[0];
+
+/* ====================== 玄学投射题 + 牌面插画 ====================== */
+const E = {
+  star:`<svg viewBox="0 0 128 128"><circle cx="64" cy="64" r="50" fill="none" stroke="url(#gPur)" stroke-width="0.6" opacity="0.5"/>
+    <path d="M64 22 L70 54 L102 60 L70 66 L64 100 L58 66 L26 60 L58 54 Z" fill="url(#gGold)"/>
+    <circle cx="40" cy="40" r="1.8" fill="#fff"/><circle cx="92" cy="46" r="1.4" fill="#67e8f9"/><circle cx="88" cy="92" r="1.6" fill="#fff"/><circle cx="38" cy="90" r="1.3" fill="#ffe9a8"/></svg>`,
+  path:`<svg viewBox="0 0 128 128"><circle cx="64" cy="38" r="16" fill="url(#gGlow)"/><circle cx="64" cy="38" r="9" fill="url(#gGold)"/>
+    <path d="M50 120 Q60 86 64 70 Q68 54 64 50" stroke="url(#gGold)" stroke-width="2" fill="none" opacity="0.9"/>
+    <path d="M78 120 Q70 88 66 72" stroke="url(#gGold)" stroke-width="2" fill="none" opacity="0.6"/>
+    <circle cx="44" cy="22" r="1.4" fill="#fff"/><circle cx="86" cy="20" r="1.4" fill="#c4b5fd"/></svg>`,
+  force:`<svg viewBox="0 0 128 128"><circle cx="64" cy="64" r="48" fill="none" stroke="url(#gPur)" stroke-width="0.6" opacity="0.5"/>
+    <path d="M72 20 L48 64 L64 64 L54 108 L84 56 L66 56 Z" fill="url(#gGold)"/>
+    <circle cx="40" cy="44" r="1.5" fill="#67e8f9"/><circle cx="90" cy="80" r="1.5" fill="#fff"/></svg>`,
+  beast:`<svg viewBox="0 0 128 128"><circle cx="64" cy="60" r="46" fill="none" stroke="url(#gGold)" stroke-width="0.6" opacity="0.5"/>
+    <path d="M30 78 Q50 44 64 64 Q78 44 98 78 Q80 70 64 84 Q48 70 30 78 Z" fill="url(#gGold)" opacity="0.95"/>
+    <path d="M64 64 L64 100" stroke="url(#gGold)" stroke-width="2"/><circle cx="64" cy="58" r="3" fill="#fff"/>
+    <circle cx="36" cy="34" r="1.5" fill="#fff"/><circle cx="94" cy="36" r="1.4" fill="#c4b5fd"/></svg>`,
+  seed:`<svg viewBox="0 0 128 128"><g stroke="url(#gGold)" stroke-width="2" fill="none">
+    <line x1="64" y1="46" x2="64" y2="20"/><line x1="64" y1="52" x2="44" y2="34"/><line x1="64" y1="52" x2="84" y2="34"/></g>
+    <circle cx="64" cy="74" r="20" fill="url(#gGlow)"/><ellipse cx="64" cy="74" rx="12" ry="16" fill="url(#gGold)"/>
+    <path d="M64 60 Q70 74 64 88 Q58 74 64 60" fill="#fffbe8" opacity="0.6"/>
+    <circle cx="40" cy="100" r="1.4" fill="#fff"/><circle cx="90" cy="102" r="1.4" fill="#67e8f9"/></svg>`,
+  door:`<svg viewBox="0 0 128 128"><path d="M42 110 L42 46 Q64 24 86 46 L86 110 Z" fill="rgba(167,139,250,0.18)" stroke="url(#gGold)" stroke-width="2"/>
+    <path d="M64 110 L64 40" stroke="url(#gGold)" stroke-width="1" opacity="0.5"/>
+    <circle cx="64" cy="58" r="14" fill="url(#gGlow)"/><circle cx="64" cy="58" r="6" fill="url(#gGold)"/>
+    <circle cx="34" cy="28" r="1.5" fill="#fff"/><circle cx="96" cy="30" r="1.4" fill="#c4b5fd"/></svg>`,
+  tarot:`<svg viewBox="0 0 128 128"><rect x="40" y="26" width="48" height="76" rx="6" fill="rgba(167,139,250,0.12)" stroke="url(#gGold)" stroke-width="1.6"/>
+    <path d="M64 44 L68 60 L84 64 L68 68 L64 84 L60 68 L44 64 L60 60 Z" fill="url(#gGold)"/>
+    <circle cx="52" cy="40" r="1.2" fill="#fff"/><circle cx="76" cy="88" r="1.2" fill="#67e8f9"/></svg>`,
+  flame:`<svg viewBox="0 0 128 128"><circle cx="64" cy="68" r="44" fill="none" stroke="url(#gPur)" stroke-width="0.6" opacity="0.4"/>
+    <path d="M64 24 Q44 52 56 74 Q44 70 48 88 Q52 110 64 110 Q76 110 80 88 Q84 70 72 74 Q84 52 64 24 Z" fill="url(#gGold)"/>
+    <path d="M64 56 Q56 70 62 84 Q66 92 64 96 Q62 92 66 84 Q72 70 64 56" fill="#fffbe8" opacity="0.7"/></svg>`,
+  mirror:`<svg viewBox="0 0 128 128"><ellipse cx="64" cy="62" rx="34" ry="46" fill="rgba(103,232,249,0.10)" stroke="url(#gGold)" stroke-width="2"/>
+    <path d="M48 44 Q64 36 80 44" stroke="#fff" stroke-width="1.4" fill="none" opacity="0.6"/>
+    <path d="M44 60 Q64 50 84 60" stroke="#fff" stroke-width="1" fill="none" opacity="0.35"/>
+    <circle cx="64" cy="116" r="5" fill="url(#gGold)"/><circle cx="34" cy="26" r="1.5" fill="#fff"/><circle cx="96" cy="28" r="1.4" fill="#c4b5fd"/></svg>`,
+};
+
+const QUESTIONS = [
+  { hint:"深夜的你", emblem:E.flame, q:"凌晨一点，你的手机屏幕还亮着，因为你在——", o:[
+    {t:"琢磨怎么让下一条内容爆掉", p:4},
+    {t:"刷别人的爆款，刷到停不下来", p:3},
+    {t:"和朋友聊天 / 打游戏 / 追剧", p:2},
+    {t:"早睡了，亮的是闹钟", p:1},
+  ]},
+  { hint:"扎心一刻", emblem:E.star, q:"你发了条动态，3 小时 0 赞，你的内心 OS 是——", o:[
+    {t:"删！重做一个更炸的", p:3},
+    {t:"冷静分析：到底哪一步没整对", p:4},
+    {t:"算了，随缘，是金子总会发光", p:2},
+    {t:"啊？我根本没在看数据", p:1},
+  ]},
+  { hint:"神仙问你", emblem:E.force, q:"神仙给你一个超能力，你会选——", o:[
+    {t:"让任何人看我一眼就记住我", p:4},
+    {t:"一眼看穿什么内容会火", p:3},
+    {t:"一天有 48 小时随便造", p:2},
+    {t:"隐身，别来烦我", p:1},
+  ]},
+  { hint:"此刻 BGM", emblem:E.beast, q:"如果此刻你的人生有 BGM，正在放的是——", o:[
+    {t:"燃到炸裂的热血战歌", p:4},
+    {t:"高级感拉满的电子节奏", p:3},
+    {t:"温柔治愈的民谣", p:2},
+    {t:"一片寂静，我享受安静", p:1},
+  ]},
+  { hint:"百年之后", emblem:E.path, q:"穿越到 100 年后，你最希望被记住的身份是——", o:[
+    {t:"改变了一代人的那个名字", p:4},
+    {t:"某个领域里绕不开的大佬", p:3},
+    {t:"一个特别有意思的灵魂", p:2},
+    {t:"不必被记住，认真活过就好", p:1},
+  ]},
+  { hint:"命运给你三个月", emblem:E.seed, q:"命运说：拼三个月就能爆红，你会——", o:[
+    {t:"推掉一切，all in 死磕到底", p:4},
+    {t:"挤出时间，认真试它一把", p:3},
+    {t:"有空就做做看吧", p:2},
+    {t:"三个月太短，算了算了", p:1},
+  ]},
+  { hint:"抽到的牌", emblem:E.tarot, q:"你信手抽出一张塔罗，牌面浮现——", o:[
+    {t:"「星辰」璀璨夺目，万众仰望", p:4},
+    {t:"「太阳」光芒万丈，温暖众生", p:3},
+    {t:"「月影」清辉独照，深邃神秘", p:2},
+    {t:"「隐者」独守心灯，自得其乐", p:1},
+  ]},
+  { hint:"你的底线", emblem:E.door, q:"爆红需要你豁出去做件事，你的底线是——", o:[
+    {t:"没有底线，红了再说！", p:4},
+    {t:"不违法不缺德，都能接受", p:3},
+    {t:"别太丢人就行", p:2},
+    {t:"我可拉不下这个脸", p:1},
+  ]},
+  { hint:"三年后的镜像", emblem:E.mirror, q:"三年后的镜子里，你身后的背景是——", o:[
+    {t:"灯火通明、座无虚席的舞台", p:4},
+    {t:"川流不息、有人在街上认出你", p:3},
+    {t:"堆满作品、只属于你的天地", p:2},
+    {t:"一片宁静、岁月静好的角落", p:1},
+  ]},
+];
+
+/* ====================== 结果档位 ====================== */
+const TIERS = [
+  { min:9, max:17, lo:9, hi:58,
+    title:"潜龙在渊 · 厚积之命",
+    tag:"慢热而扎实，后劲深远",
+    ac:"#34d0b0", ac2:"#6fe7cf", b1:"#06241f", b2:"#0d3a30",
+    desc:"你的牌面流转着「水」的气韵——不疾不徐，却能穿石。你不是一夜惊雷的命格，而是细水长流、终成江海之人。最稀缺的「坚持」二字，恰是你的天赋。只需选定一处深耕，五十万粉是你稳稳的命数下限。",
+    steps:[
+      "认准<b>一个</b>细分领域，半年之内莫要动摇",
+      "定下雷打不动的更新节律，先让习惯生根",
+      "把每条内容做成<b>可被搜索</b>的干货，养长尾之缘",
+      "满一百条再论成败，莫在十条时就自断命途",
+    ]},
+  { min:18, max:25, lo:92, hi:640,
+    title:"破壁之相 · 准头部命",
+    tag:"已具登顶之骨，只欠东风",
+    ac:"#6f9bff", ac2:"#a8c2ff", b1:"#0a1330", b2:"#16244f",
+    desc:"你的牌阵中，「持续」「专业」「数据之眼」三星汇聚——这是大多数人求而不得的格局。百万粉于你不是侥幸，而是时间问题。眼下唯一的关隘，是尚未寻得那个专属于你的「招牌形式」。一旦寻得，你将扶摇直上。",
+    steps:[
+      "锤炼<b>人设辨识度</b>：一句话能道清你是谁",
+      "打磨出 1 个<b>招牌内容形式</b>，反复做到极致",
+      "每条爆款都<b>逆向拆解</b>：它为何火、能否复刻",
+      "沉淀私域铁粉，让流量化作<b>能复购的资产</b>",
+    ]},
+  { min:26, max:32, lo:880, hi:3200,
+    title:"紫微现世 · 顶流之命",
+    tag:"千中选一的现象级种子",
+    ac:"#ff8a4c", ac2:"#ffb88a", b1:"#2a0f06", b2:"#4a1d0c",
+    desc:"你的命盘中「独特价值」「极致执行」「流量嗅觉」三相齐全，这是顶流降世的征兆。千万之路，拼的已非单条内容，而是「体系」——能否将爆款炼成可复制的公式，能否让生产工业化。你已立于天门之前，只待跨入。",
+    steps:[
+      "把成功炼成<b>可复制的爆款公式</b>，莫再靠灵光",
+      "跨平台<b>矩阵分发</b>：一次生产，全网铺展",
+      "团队化生产，自己从「做内容」升维到「定方向」",
+      "持续制造<b>话题与记忆点</b>，让世人记住你这个「符号」",
+    ]},
+  { min:33, max:36, lo:3600, hi:9600,
+    title:"天命所归 · 国民之相",
+    tag:"万中无一的现象级命格",
+    ac:"#ffd24a", ac2:"#ffe89a", b1:"#2a2206", b2:"#4a3c0c",
+    desc:"九牌齐耀金光，映出一种近乎偏执的「使命」与「全力以赴」——这正是国民级 IP 的命底。五千万粉早已超脱技巧之争，化为「你代表了什么」的天问。当你成为某种生活方式的代名词，数字不过是命运的回响。此路注定孤独，而你，似乎生来就为此而立。",
+    steps:[
+      "找到你能<b>定义一个品类</b>的那一点，成为代名词",
+      "内容<b>工业化</b>：体系、团队、供应链尽数运转",
+      "商业与影响力<b>双轮驱动</b>，彼此成就、互相放大",
+      "守住价值观的底线——至此境地，<b>人设若崩则满盘皆输</b>",
+    ]},
+];
+
+/* ====================== 逻辑 ====================== */
+let cur=0, answers=[];
+const $=id=>document.getElementById(id);
+const CN=["第一牌","第二牌","第三牌","第四牌","第五牌","第六牌","第七牌","第八牌","第九牌"];
+
+(function(){ let n=1286402+(Date.now()%900); $("cnt").textContent=n.toLocaleString(); })();
+$("brandfoot").textContent=CONFIG.brandName;
+
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));$(id).classList.add("on");window.scrollTo(0,0);}
+function start(){cur=0;answers=[];renderQ();show("screen-quiz");}
+function renderQ(){
+  const Q=QUESTIONS[cur];
+  $("qhint").textContent=Q.hint;
+  $("emblem").innerHTML=Q.emblem;
+  $("qtext").textContent=Q.q;
+  $("qnum").textContent=CN[cur];
+  $("bar").style.width=(cur/QUESTIONS.length*100)+"%";
+  const box=$("opts");box.innerHTML="";
+  Q.o.forEach((o,i)=>{
+    const d=document.createElement("div");
+    d.className="opt"+(answers[cur]===i?" sel":"");
+    d.innerHTML=`<div class="dot"></div><div class="t">${o.t}</div>`;
+    d.onclick=()=>pick(i);
+    box.appendChild(d);
+  });
+}
+function pick(i){
+  answers[cur]=i;
+  document.querySelectorAll(".opt").forEach((e,idx)=>e.classList.toggle("sel",idx===i));
+  setTimeout(()=>{
+    if(cur<QUESTIONS.length-1){cur++;renderQ();}
+    else{$("bar").style.width="100%";finish();}
+  },300);
+}
+function back(){ if(cur===0){show("screen-intro");return;} cur--;renderQ(); }
+function finish(){
+  const score=answers.reduce((s,a,i)=>s+QUESTIONS[i].o[a].p,0);
+  const tier=TIERS.find(t=>score>=t.min&&score<=t.max)||TIERS[0];
+  const wan=calcWan(tier,score);
+  paint(tier,score);
+  show("screen-result");
+  countUp(wan);
+  makeQR();
+  burst(tier.ac);
+}
+// 从分数 + 答案指纹算出一个「精确而非整数」的粉丝数（万），同样答案结果固定
+function calcWan(tier,score){
+  const h=answers.reduce((a,v,i)=>a + v*(i+7)*31 + QUESTIONS[i].o[v].p*13, 7)>>>0;
+  const frac=(h%997)/997;                          // 0~1 指纹
+  const tf=(score-tier.min)/((tier.max-tier.min)||1); // 0~1 档内位置
+  return tier.lo+(tier.hi-tier.lo)*(0.30*tf+0.70*frac);
+}
+function fmtWan(w){ return w<100 ? (Math.round(w*10)/10).toFixed(1) : Math.round(w).toLocaleString(); }
+function paint(t,score){
+  document.documentElement.style.setProperty("--ac",t.ac);
+  document.documentElement.style.setProperty("--ac2",t.ac2);
+  $("nebula").style.background=`radial-gradient(60% 40% at 25% 12%, ${t.ac}55, transparent 60%),radial-gradient(70% 50% at 50% 100%, ${t.ac}33, transparent 60%),radial-gradient(120% 90% at 50% 0%, ${t.b2}, ${t.b1} 75%)`;
+  $("rtitle").textContent=t.title;
+  $("rtag").textContent=t.tag;
+  $("rdesc").textContent=t.desc;
+  $("runit").textContent="万";
+  const pct=Math.min(99.9, 38+(score-9)/(36-9)*61).toFixed(1);
+  $("rpct").textContent=`命格胜过 ${pct}% 的占卜者`;
+  // 光芒射线
+  let rays="";for(let i=0;i<24;i++){const a=i*15*Math.PI/180,x1=170+Math.cos(a)*70,y1=150+Math.sin(a)*70,x2=170+Math.cos(a)*150,y2=150+Math.sin(a)*150;rays+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${t.ac2}" stroke-width="${i%2?0.6:1.4}" opacity="${i%2?0.3:0.6}"/>`;}
+  $("halo-rays").innerHTML=rays;
+  const box=$("rsteps");box.innerHTML="";
+  t.steps.forEach((s,i)=>{const d=document.createElement("div");d.className="step";d.innerHTML=`<div class="n">${i+1}</div><div class="s">${s}</div>`;box.appendChild(d);});
+}
+function countUp(target){
+  const el=$("rnum");const dur=1800;const t0=performance.now();const dec=target<100;
+  function tick(now){const p=Math.min(1,(now-t0)/dur);const e=1-Math.pow(1-p,3);const v=target*e;
+    el.textContent=dec?v.toFixed(1):Math.round(v).toLocaleString();
+    if(p<1)requestAnimationFrame(tick);else el.textContent=fmtWan(target);}
+  requestAnimationFrame(tick);
+}
+function makeQR(){
+  $("qr1").innerHTML="";
+  if(typeof QRCode==="undefined")return;
+  try{ new QRCode($("qr1"),{text:SHARE_URL,width:220,height:220,colorDark:"#1a1030",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M}); }catch(e){}
+}
+function restart(){
+  $("nebula").style.background="";
+  document.documentElement.style.setProperty("--ac","#a78bfa");
+  document.documentElement.style.setProperty("--ac2","#c4b5fd");
+  show("screen-intro");
+}
+async function share(){
+  const num=$("rnum").textContent;
+  const txt=`命运占卜显示，我未来将拥有 ${num} 万粉丝！命格「${$("rtitle").textContent}」✨ 你也来测测你的粉丝命数 👇`;
+  const data={title:"粉丝数 · 命运占卜",text:txt,url:SHARE_URL};
+  if(navigator.share){try{await navigator.share(data);return;}catch(e){}}
+  try{await navigator.clipboard.writeText(txt+" "+SHARE_URL);toast("命数链接已复制，去分享吧 ✨");}
+  catch(e){toast("截图这张命牌分享给朋友吧 📸");}
+}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200);}
+
+/* ====================== 星空背景 ====================== */
+(function starfield(){
+  const c=$("stars"),x=c.getContext("2d");let stars=[];
+  function rs(){c.width=innerWidth;c.height=innerHeight;stars=[];const n=Math.min(150,Math.floor(innerWidth*innerHeight/9000));
+    for(let i=0;i<n;i++)stars.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.4+0.3,a:Math.random(),s:Math.random()*0.02+0.004,c:Math.random()>0.85?"#c4b5fd":(Math.random()>0.6?"#ffe9a8":"#ffffff")});}
+  rs();addEventListener("resize",rs);
+  (function loop(){x.clearRect(0,0,c.width,c.height);stars.forEach(p=>{p.a+=p.s;const al=0.35+Math.abs(Math.sin(p.a))*0.55;x.globalAlpha=al;x.fillStyle=p.c;x.beginPath();x.arc(p.x,p.y,p.r,0,7);x.fill();});x.globalAlpha=1;requestAnimationFrame(loop);})();
+})();
+
+/* ====================== 彩带 ====================== */
+function burst(color){
+  const c=$("confetti"),x=c.getContext("2d");c.width=innerWidth;c.height=innerHeight;
+  const cols=[color,"#ffe9a8","#67e8f9","#f472b6","#ffffff"];let ps=[];
+  for(let i=0;i<150;i++)ps.push({x:innerWidth/2+(i%2?1:-1)*Math.min(130,i),y:innerHeight*0.32,vx:(((i*37)%100)/100-0.5)*9,vy:-(((i*53)%100)/100)*12-3,g:0.28+((i*17)%30)/100,s:5+((i*13)%7),rot:(i*29)%360,vr:((i%2)?1:-1)*((i*7)%12),col:cols[i%cols.length],life:0});
+  let frame=0;
+  (function loop(){x.clearRect(0,0,c.width,c.height);let alive=false;
+    ps.forEach(p=>{p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;p.life++;
+      if(p.y<c.height+40){alive=true;x.save();x.translate(p.x,p.y);x.rotate(p.rot*Math.PI/180);x.fillStyle=p.col;x.globalAlpha=Math.max(0,1-p.life/150);x.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.6);x.restore();}});
+    frame++;if(alive&&frame<210)requestAnimationFrame(loop);else x.clearRect(0,0,c.width,c.height);})();
+}
+</script>
+</body>
+</html>
