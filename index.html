@@ -430,7 +430,7 @@ const CN=["第一牌","第二牌","第三牌","第四牌","第五牌","第六牌
 $("brandfoot").textContent=CONFIG.brandName;
 
 /* ====================== 统计计数（Abacus，免注册）====================== */
-const STAT_NS="tubo-fans-test";        // 命名空间，改成别的就是另一套独立统计
+const STAT_NS="tubo-fate-live";        // 命名空间，改成别的就是另一套独立统计
 const STAT_BASE="https://abacus.jasoncameron.dev";
 const SOCIAL_BASE=8800;                // 社交证明的起步基数（页面好看用；真实数字看统计页）
 function statHit(key){ return fetch(`${STAT_BASE}/hit/${STAT_NS}/${key}`).then(r=>r.json()).then(d=>d.value).catch(()=>null); }
